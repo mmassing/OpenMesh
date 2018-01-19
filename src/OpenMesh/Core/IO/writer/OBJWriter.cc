@@ -225,9 +225,8 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
      return false;
 
 
-  // check writer features
-  if ( _opt.check(Options::Binary)     || // not supported by format
-       _opt.check(Options::FaceNormal))
+  // check for unsupported writer features
+  if (_opt.check(Options::FaceNormal) || _opt.check(Options::VertexColor))
      return false;
 
 
