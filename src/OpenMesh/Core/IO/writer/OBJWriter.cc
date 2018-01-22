@@ -268,9 +268,8 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
       texMap[texCoords[i]] = i;
     }
   }
-
   //collect Texturevertices from vertices
-  if(_opt.check(Options::VertexTexCoord))
+  else if(_opt.check(Options::VertexTexCoord))
   {
     for (size_t i=0, nV=_be.n_vertices(); i<nV; ++i)
     {
@@ -279,6 +278,34 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
       texMap[t] = static_cast<int>(i);
     }
   }
+
+  std::map<Vec3f,int> normalMap;
+  //collect halfedge normals
+  if(_opt.check(Options::HalfedgeNormal))
+  {
+    std::vector<Vec3f> normals;
+    for (std::size_t f = 0; f < _be.n_faces(); ++f)
+    {
+      FaceHandle fh(f);
+      _be.get_vhandles(fh, vhandles);
+      for (j=0; j< vhandles.size(); ++j)
+      {
+        const OpenMesh::Vec3f& n = _be.normal(_be.getHeh(fh, vhandles[j]));
+        normalMap[n] = -1;
+      }
+    }
+  }
+  //collect vertex normals
+  else if(_opt.check(Options::VertexNormal))
+  {
+    for (size_t i=0, nV = _be.n_vertices(); i<nV; ++i)
+    {
+      vh = VertexHandle(static_cast<int>(i));
+      n = _be.normal(vh);
+      normalMap[n] = static_cast<int>(i);
+    }
+  }
+
 
   // assign each texcoord in the map its id
   // and write the vt entries
@@ -292,25 +319,32 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
     }
   }
 
+  // assign each normal in the map its id
+  // and write the vn entries
+  if(_opt.check(Options::VertexNormal) || _opt.check(Options::HalfedgeNormal))
+  {
+    int normalId = 0;
+    for(std::map<Vec3f,int>::iterator it = normalMap.begin(); it != normalMap.end() ; ++it)
+    {
+      _out << "vn " << it->first[0] << " " << it->first[1] << " " << it->first[2] << '\n';
+      it->second = ++normalId;
+    }
+  }
+
+
   // vertex data (point, normals, texcoords)
   for (i=0, nV=_be.n_vertices(); i<nV; ++i)
   {
     vh = VertexHandle(int(i));
     v  = _be.point(vh);
-    n  = _be.normal(vh);
-    t  = _be.texcoord(vh);
-
     _out << "v " << v[0] <<" "<< v[1] <<" "<< v[2] << '\n';
-
-    if (_opt.check(Options::VertexNormal))
-      _out << "vn " << n[0] <<" "<< n[1] <<" "<< n[2] << '\n';    
   }
 
   size_t lastMaterialIndex = std::numeric_limits<std::size_t>::max();
 
   // we do not want to write seperators if we only write vertex indices
   bool onlyVertices =    !_opt.check(Options::VertexTexCoord)
-                      && !_opt.check(Options::VertexNormal)
+                      && !(_opt.check(Options::VertexNormal) || _opt.check(Options::HalfedgeNormal))
                       && !_opt.check(Options::FaceTexCoord);
 
   // faces (indices starting at 1 not 0)
@@ -362,11 +396,17 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
             _out  << texMap[_be.texcoord(vhandles[j])];
         }
 
+        if (_opt.check(Options::HalfedgeNormal))
+        {
+            // write separator
+            _out << "/" ;
+        	_out << normalMap[_be.normal(_be.getHeh(FaceHandle(int(i)), vhandles[j]))];
+        }
         // write vertex normal index
-        if ( _opt.check(Options::VertexNormal) ) {
+        else if ( _opt.check(Options::VertexNormal) ) {
           // write separator
           _out << "/" ;
-          _out << idx;
+          _out << normalMap[_be.normal(vh)];
         }
       }
     }
