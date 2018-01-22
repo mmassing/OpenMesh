@@ -406,7 +406,7 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
         else if ( _opt.check(Options::VertexNormal) ) {
           // write separator
           _out << "/" ;
-          _out << normalMap[_be.normal(vh)];
+          _out << normalMap[_be.normal(vhandles[j])];
         }
       }
     }
