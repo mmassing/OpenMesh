@@ -206,15 +206,7 @@ bool
 _OBJWriter_::
 write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _precision) const
 {
-  unsigned int idx;
-  size_t i, j,nV, nF;
-  Vec3f v, n;
-  Vec2f t;
-  VertexHandle vh;
-  std::vector<VertexHandle> vhandles;
   bool useMatrial = false;
-  OpenMesh::Vec3f c;
-  OpenMesh::Vec4f cA;
 
   omlog() << "[OBJWriter] : write file\n";
 
@@ -273,11 +265,13 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
   {
     for (size_t i=0, nV=_be.n_vertices(); i<nV; ++i)
     {
-      vh = VertexHandle(static_cast<int>(i));
-      t  = _be.texcoord(vh);
+      VertexHandle vh(static_cast<int>(i));
+      Vec2f t = _be.texcoord(vh);
       texMap[t] = static_cast<int>(i);
     }
   }
+
+  std::vector<VertexHandle> vhandles;
 
   std::map<Vec3f,int> normalMap;
   //collect halfedge normals
@@ -288,7 +282,7 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
     {
       FaceHandle fh(f);
       _be.get_vhandles(fh, vhandles);
-      for (j=0; j< vhandles.size(); ++j)
+      for (std::size_t j=0; j< vhandles.size(); ++j)
       {
         const OpenMesh::Vec3f& n = _be.normal(_be.getHeh(fh, vhandles[j]));
         normalMap[n] = -1;
@@ -300,8 +294,8 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
   {
     for (size_t i=0, nV = _be.n_vertices(); i<nV; ++i)
     {
-      vh = VertexHandle(static_cast<int>(i));
-      n = _be.normal(vh);
+      VertexHandle vh(static_cast<int>(i));
+      Vec3f n = _be.normal(vh);
       normalMap[n] = static_cast<int>(i);
     }
   }
@@ -333,10 +327,10 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
 
 
   // vertex data (point, normals, texcoords)
-  for (i=0, nV=_be.n_vertices(); i<nV; ++i)
+  for (std::size_t i=0, nV=_be.n_vertices(); i<nV; ++i)
   {
-    vh = VertexHandle(int(i));
-    v  = _be.point(vh);
+    VertexHandle vh(static_cast<int>(i));
+    Vec3f v  = _be.point(vh);
     _out << "v " << v[0] <<" "<< v[1] <<" "<< v[2] << '\n';
   }
 
@@ -347,8 +341,9 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
                       && !(_opt.check(Options::VertexNormal) || _opt.check(Options::HalfedgeNormal))
                       && !_opt.check(Options::HalfedgeTexCoord);
 
+
   // faces (indices starting at 1 not 0)
-  for (i=0, nF=_be.n_faces(); i<nF; ++i)
+  for (std::size_t i=0, nF=_be.n_faces(); i<nF; ++i)
   {
     if (useMatrial) {
       size_t materialIndex = std::numeric_limits<std::size_t>::max();
@@ -368,11 +363,11 @@ write(std::ostream& _out, BaseExporter& _be, Options _opt, std::streamsize _prec
 
     _be.get_vhandles(FaceHandle(int(i)), vhandles);
 
-    for (j=0; j< vhandles.size(); ++j)
+    for (std::size_t j=0; j< vhandles.size(); ++j)
     {
 
       // Write vertex index
-      idx = vhandles[j].idx() + 1;
+      unsigned int idx = vhandles[j].idx() + 1;
       _out << " " << idx;
 
       if (!onlyVertices) {
